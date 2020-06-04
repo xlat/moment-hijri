@@ -257,10 +257,10 @@
                 , 'Jumada al-Ula'
                 , 'Jumada al-Alkhirah'
                 , 'Rajab'
-                , 'Sha’ban'
+                , 'Sha&#8217;ban'
                 , 'Ramadhan'
                 , 'Shawwal'
-                , 'Thul-Qi’dah'
+                , 'Thul-Q&#8217;dah'
                 , 'Thul-Hijjah'
                 ],
 		iMonths: function (m) {
@@ -308,13 +308,16 @@
 		iMonthsShort: 'محرم_صفر_ربيع ١_ربيع ٢_جمادى ١_جمادى ٢_رجب_شعبان_رمضان_شوال_ذو القعدة_ذو الحجة'.split('_')
 	};
 
-	// Default to the momentjs 2.12+ API
-	if (typeof moment.updateLocale === 'function') {
-		moment.updateLocale('ar-sa', iMonthNames);
-	} else {
-		var oldLocale = moment.locale();
-		moment.defineLocale('ar-sa', iMonthNames);
-		moment.locale(oldLocale);
+	{
+		var currLocale = moment.locale();	//'ar-sa'; //This sould be done explicitly, or at least based on browser locale/language (navigator.language)
+		// Default to the momentjs 2.12+ API
+		if (typeof moment.updateLocale === 'function') {
+			moment.updateLocale(currLocale, iMonthNames);
+		} else {
+			var oldLocale = moment.locale();
+			moment.defineLocale(currLocale, iMonthNames);
+			moment.locale(oldLocale);
+		}
 	}
 
 	/************************************
@@ -655,6 +658,41 @@
 			return toHijri(this.year(), this.month(), this.date()).hy
 		}
 	}
+
+	hMoment.fn.iMonthsAdjustments = function(adjustments) {
+		if(typeof(adjustments)==="string") {
+			//Parse data, one row by adjustment in the form "year-month: nbdays"
+			var rows = adjustments.split("\n");
+			adjustments = {};
+			var rx = /^\s*(\d+)[-\/](\d+)\s*:\s*(\d+)/;
+			rows.forEach(function(row){
+				var match = rx.exec(row);
+				if(match) {
+					//append year -> month = days into adjustments
+					var y = match[1], m = match[2], d = match[3];
+					if(!adjustments[y]) adjustments[y] = {};
+					adjustments[y][m] = parseInt(d);
+				}
+				else {
+					//DEBUG, may be empty rows or comments (or not well-formed specification)
+					console.log("iMonthsAdjustments: could not match ", row);
+				}
+			});
+			console.log("parsed rows as:", adjustments);
+		}
+		//patch ummalqura.ummalquraData
+		var data = ummalqura.ummalquraData.map(function(val, idx, ary) { return val - (idx == 0 ? 28607 - 30 : ary[idx - 1]); });
+		Object.keys(adjustments).sort().forEach(function(year){
+			Object.keys(adjustments[year]).sort().forEach(function(month) {
+				var days = adjustments[year][month];
+				var i = getNewMoonMJDNIndex(parseInt(year), parseInt(month));
+				data[i] = days;
+			});
+		});
+		var prec = 28607 - 30;
+		ummalqura.ummalquraData = data.map(function(val, idx, ary) {return prec = val += prec;});
+	};
+	hMoment.iMonthsAdjustments = hMoment.fn.iMonthsAdjustments;
 
 	hMoment.fn.iMonth = function (input) {
 		var lastDay, h, g

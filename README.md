@@ -96,6 +96,10 @@ moment('2014-11-28 16:40:00', 'YYYY-M-D HH:mm:ss').endOf('iMonth').format('iYYYY
 
 // Complex parse:
 moment('1990 5 25', 'YYYY iM D').format('YYYY/MM/DD'); // 1990/03/25
+
+// Adjust Hijri calendar, to specify months length manually (alpha feature)
+moment().iMonthsAdjustments("1441-1: 29\n1442-2: 29");
+
 ```
 
 To use the Arabic locale:
